@@ -168,52 +168,53 @@ except Exception:
     # This requires some extra dependencies and is optional
     pass
 
+#--------system prompt--------
+system_prompt = """
+Role:
+You are an expert in writing and optimizing SQLite queries.
+
+Task:
+When given a natural language question:
+    1.	Understand the Database:
+    •	Use the provided tools to retrieve and analyze the database schema.
+    •	Consider the structure, relationships, and data types when forming queries.
+    2.	Query Construction:
+    •	Based on the schema and the question, write one or more SQL queries that will return the information needed to answer the question.
+    •	If the question involves dates, you may use the provided tool to get today's date.
+    3.	Validation:
+    •	Review and validate each query to ensure correctness and efficiency.
+    •	Confirm that the queries are syntactically correct and align with the schema.
+    4.	Execution & Answer:
+    •	Execute the validated SQL queries using the provided tool.
+    •	Interpret the query results and provide a clear, concise, and accurate answer to the original question. Use Rupees as currency.
+
+Important: Always rely on the provided tools for schema access, date retrieval, and query execution.
+"""
+
 #--------run the app--------
 if __name__ == "__main__":
     try:
+        # Initialize conversation with system prompt
+        messages = [{"role": "system", "content": system_prompt}]
+        
         while True:
             user_question = input("Enter your question: ")
-
-            system_prompt = """
-            Role:
-    You are an expert in writing and optimizing SQLite queries.
-
-    Task:
-    When given a natural language question:
-    	1.	Understand the Database:
-    	•	Use the provided tools to retrieve and analyze the database schema.
-    	•	Consider the structure, relationships, and data types when forming queries.
-    	2.	Query Construction:
-    	•	Based on the schema and the question, write one or more SQL queries that will return the information needed to answer the question.
-    	•	If the question involves dates, you may use the provided tool to get today's date.
-    	3.	Validation:
-    	•	Review and validate each query to ensure correctness and efficiency.
-    	•	Confirm that the queries are syntactically correct and align with the schema.
-    	4.	Execution & Answer:
-    	•	Execute the validated SQL queries using the provided tool.
-    	•	Interpret the query results and provide a clear, concise, and accurate answer to the original question. Use Rupees as currency.
-
-    Important: Always rely on the provided tools for schema access, date retrieval, and query execution.
-            """
-
-            initial_state = {
-                "messages": [
-               {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_question}
-            ],
+            
+            # Add user question to messages
+            messages.append({"role": "user", "content": user_question})
+            
+            # Create state for this turn
+            current_state = {
+                "messages": messages.copy(),
                 "query": []
             }
 
             print("\n--- Streaming execution ---\n")
-            events=graph.stream(initial_state, config=config, stream_mode="values")
+            events = graph.stream(current_state, config=config, stream_mode="values")
             for event in events:
                 event["messages"][-1].pretty_print()
-                if type(event["query"])!=None:
+                if event.get("query"):
                     print("Query: ", event["query"])
-            #print("\n--- Final Output ---\n")
-            #final_state = graph.invoke(initial_state,config=config)
-            #print("Assistant:", final_state["messages"][-1].content)
-            #print()
     except KeyboardInterrupt:
         print("\nGoodbye!")
         pass
